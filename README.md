@@ -55,9 +55,12 @@ cmake --build build --config Release
 |---|---|
 | `Source/RaumDsp.h` | Doubler, Bandecho, Federhall (reines C++) |
 | `Source/PluginProcessor.*` | Parameter, Presets, Signalweg |
-| `Source/PluginEditor.*` | Oberfläche |
+| `Source/PluginEditor.*` | Vintage-Oberfläche mit VU-Metern (0 VU = −18 dBFS) |
+| `Resources/` | Schriften für die Oberfläche |
 | `.github/workflows/build-macos.yml` | Automatischer Mac-Build inkl. `auval`-Test |
 
 ## Lizenz-Hinweis
+
+Schriften: *Oswald* (SIL Open Font License 1.1) und *Yellowtail* (Apache License 2.0), Lizenztexte in `Resources/`.
 
 JUCE steht unter AGPLv3 bzw. einer kommerziellen Lizenz. Für den privaten Gebrauch unproblematisch.

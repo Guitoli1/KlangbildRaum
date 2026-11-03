@@ -39,7 +39,8 @@ public:
     static juce::StringArray syncNames();
 
     juce::AudioProcessorValueTreeState apvts;
-    std::atomic<float> meterL { 0 }, meterR { 0 };
+    std::atomic<float> meterL { 0 }, meterR { 0 };   // Spitzenwerte
+    std::atomic<float> vuL { 0 }, vuR { 0 };         // gleichgerichteter Mittelwert für die VU-Meter
 
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
@@ -60,6 +61,7 @@ private:
     juce::SmoothedValue<float> smSOn, smSDwell, smSMix, smOut;
     float lastETone = -1, lastSDecay = -1, lastSTone = -1;
 
+    float vuStateL = 0, vuStateR = 0, vuCoef = 0.001f;
     int currentProgram = 0;
     double sr = 48000;
 

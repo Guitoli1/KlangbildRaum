@@ -1,80 +1,361 @@
 #include "PluginEditor.h"
+#include "BinaryData.h"
+
+using namespace vintage;
 
 //==============================================================================
-RaumLookAndFeel::RaumLookAndFeel()
+VintageLookAndFeel::VintageLookAndFeel()
 {
-    setColour (juce::ResizableWindow::backgroundColourId, theme::background);
-    setColour (juce::Label::textColourId, theme::textDim);
-    setColour (juce::Slider::textBoxTextColourId, theme::text);
-    setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-    setColour (juce::Slider::textBoxBackgroundColourId, juce::Colours::transparentBlack);
-    setColour (juce::ComboBox::backgroundColourId, theme::inset);
-    setColour (juce::ComboBox::outlineColourId, theme::line);
-    setColour (juce::ComboBox::textColourId, theme::text);
-    setColour (juce::ComboBox::arrowColourId, theme::textDim);
-    setColour (juce::PopupMenu::backgroundColourId, theme::panel);
-    setColour (juce::PopupMenu::textColourId, theme::text);
-    setColour (juce::PopupMenu::highlightedBackgroundColourId, theme::line);
-    setColour (juce::PopupMenu::highlightedTextColourId, juce::Colours::white);
-    setColour (juce::ToggleButton::textColourId, theme::text);
-    setColour (juce::TextEditor::backgroundColourId, theme::inset);
-    setColour (juce::TextEditor::textColourId, theme::text);
+    script        = juce::Typeface::createSystemTypefaceFor (BinaryData::YellowtailRegular_ttf, BinaryData::YellowtailRegular_ttfSize);
+    oswaldMedium  = juce::Typeface::createSystemTypefaceFor (BinaryData::OswaldMedium_ttf,     BinaryData::OswaldMedium_ttfSize);
+    oswaldRegular = juce::Typeface::createSystemTypefaceFor (BinaryData::OswaldRegular_ttf,    BinaryData::OswaldRegular_ttfSize);
+    setDefaultSansSerifTypeface (oswaldRegular);
+
+    setColour (juce::ComboBox::textColourId, cream);
+    setColour (juce::PopupMenu::backgroundColourId, cream);
+    setColour (juce::PopupMenu::textColourId, ink);
+    setColour (juce::PopupMenu::highlightedBackgroundColourId, ink);
+    setColour (juce::PopupMenu::highlightedTextColourId, cream);
 }
 
-void RaumLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int w, int h, float pos,
-                                        float startAngle, float endAngle, juce::Slider& slider)
+juce::Font VintageLookAndFeel::labelFont (float h, float kerning) const
 {
-    const auto bounds = juce::Rectangle<float> ((float) x, (float) y, (float) w, (float) h).reduced (4.0f);
-    const float r = juce::jmin (bounds.getWidth(), bounds.getHeight()) * 0.5f;
-    const auto c = bounds.getCentre();
-    const float lineW = 4.0f, arcR = r - lineW * 0.5f;
-    const auto colour = slider.isEnabled() ? slider.findColour (juce::Slider::rotarySliderFillColourId)
-                                           : theme::textDim.withAlpha (0.4f);
+    return juce::Font (juce::FontOptions (oswaldMedium).withHeight (h)).withExtraKerningFactor (kerning);
+}
+juce::Font VintageLookAndFeel::labelFontRegular (float h) const { return juce::Font (juce::FontOptions (oswaldRegular).withHeight (h)); }
+juce::Font VintageLookAndFeel::scriptFont (float h) const       { return juce::Font (juce::FontOptions (script).withHeight (h)); }
 
-    juce::Path bg;
-    bg.addCentredArc (c.x, c.y, arcR, arcR, 0.0f, startAngle, endAngle, true);
-    g.setColour (theme::line);
-    g.strokePath (bg, juce::PathStrokeType (lineW, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+juce::Label* VintageLookAndFeel::createSliderTextBox (juce::Slider& s) { return LookAndFeel_V4::createSliderTextBox (s); }
 
-    float fromAngle = startAngle;
-    if (slider.getMinimum() < 0.0 && slider.getMaximum() > 0.0)
-        fromAngle = startAngle + (float) slider.valueToProportionOfLength (0.0) * (endAngle - startAngle);
-    const float toAngle = startAngle + pos * (endAngle - startAngle);
-    if (std::abs (toAngle - fromAngle) > 0.001f)
+void VintageLookAndFeel::drawJewel (juce::Graphics& g, juce::Rectangle<float> r, juce::Colour c, bool lit)
+{
+    if (lit)
     {
-        juce::Path val;
-        val.addCentredArc (c.x, c.y, arcR, arcR, 0.0f, juce::jmin (fromAngle, toAngle), juce::jmax (fromAngle, toAngle), true);
-        g.setColour (colour);
-        g.strokePath (val, juce::PathStrokeType (lineW, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        g.setGradientFill (juce::ColourGradient (c.withAlpha (0.45f), r.getCentreX(), r.getCentreY(),
+                                                 c.withAlpha (0.0f), r.getCentreX() + r.getWidth(), r.getCentreY(), true));
+        g.fillEllipse (r.expanded (r.getWidth() * 0.55f));
+    }
+    // Chromring
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xffeeeeee), r.getX(), r.getY(),
+                                             juce::Colour (0xff4d4d4d), r.getRight(), r.getBottom(), false));
+    g.fillEllipse (r);
+    g.setColour (juce::Colours::black.withAlpha (0.6f));
+    g.drawEllipse (r, 0.8f);
+
+    const auto inner = r.reduced (r.getWidth() * 0.17f);
+    const auto top = inner.getCentre().translated (-inner.getWidth() * 0.15f, -inner.getHeight() * 0.18f);
+    if (lit)
+        g.setGradientFill (juce::ColourGradient (c.brighter (0.9f), top.x, top.y, c.darker (0.5f), inner.getRight(), inner.getBottom(), true));
+    else
+        g.setGradientFill (juce::ColourGradient (c.darker (1.6f), top.x, top.y, c.darker (3.5f), inner.getRight(), inner.getBottom(), true));
+    g.fillEllipse (inner);
+
+    // Facetten
+    g.setColour (juce::Colours::black.withAlpha (lit ? 0.18f : 0.3f));
+    const auto cc = inner.getCentre();
+    for (int k = 0; k < 6; ++k)
+    {
+        const float a = (float) k * juce::MathConstants<float>::pi / 3.0f;
+        g.drawLine ({ cc.getPointOnCircumference (inner.getWidth() * 0.18f, a), cc.getPointOnCircumference (inner.getWidth() * 0.48f, a) }, 0.6f);
+    }
+    g.setColour (juce::Colours::white.withAlpha (lit ? 0.75f : 0.3f));
+    g.fillEllipse (juce::Rectangle<float> (inner.getWidth() * 0.28f, inner.getHeight() * 0.2f).withCentre (top));
+}
+
+void VintageLookAndFeel::drawScrew (juce::Graphics& g, juce::Point<float> c, float rad, float angle)
+{
+    const auto r = juce::Rectangle<float> (rad * 2, rad * 2).withCentre (c);
+    g.setColour (juce::Colours::black.withAlpha (0.35f));
+    g.fillEllipse (r.translated (0.6f, 1.0f).expanded (0.6f));
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xfff2f2f2), r.getX(), r.getY(), juce::Colour (0xff6a6a6a), r.getRight(), r.getBottom(), false));
+    g.fillEllipse (r);
+    g.setColour (juce::Colour (0xff3a3a3a));
+    g.drawLine ({ c.getPointOnCircumference (rad * 0.75f, angle), c.getPointOnCircumference (rad * 0.75f, angle + juce::MathConstants<float>::pi) }, 1.3f);
+}
+
+void VintageLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int w, int h, float pos,
+                                           float startAngle, float endAngle, juce::Slider& slider)
+{
+    auto b = juce::Rectangle<float> ((float) x, (float) y, (float) w, (float) h);
+    const auto tagArea = b.removeFromBottom (16.0f);
+    const float r = juce::jmin (b.getWidth(), b.getHeight()) * 0.5f - 20.0f;
+    const auto c = b.getCentre();
+    const float angle = startAngle + pos * (endAngle - startAngle);
+
+    // Skala 0–10, auf die Frontplatte gedruckt
+    for (int i = 0; i <= 10; ++i)
+    {
+        const float a = startAngle + (float) i / 10.0f * (endAngle - startAngle);
+        g.setColour (ink.withAlpha (0.85f));
+        g.drawLine ({ c.getPointOnCircumference (r + 3.0f, a), c.getPointOnCircumference (r + (i % 5 == 0 ? 9.0f : 6.5f), a) }, i % 5 == 0 ? 1.4f : 1.0f);
+        g.setFont (labelFontRegular (10.0f));
+        const auto np = c.getPointOnCircumference (r + 15.5f, a);
+        g.drawText (juce::String (i), juce::Rectangle<float> (16.0f, 12.0f).withCentre (np), juce::Justification::centred);
     }
 
-    const float knobR = r - lineW - 4.0f;
-    const auto knob = juce::Rectangle<float> (knobR * 2, knobR * 2).withCentre (c);
-    g.setGradientFill (juce::ColourGradient (theme::panel.brighter (0.35f), c.x, knob.getY(),
-                                             theme::panel.brighter (0.1f), c.x, knob.getBottom(), false));
+    const auto knob = juce::Rectangle<float> (r * 2, r * 2).withCentre (c);
+    g.setColour (juce::Colours::black.withAlpha (0.35f));
+    g.fillEllipse (knob.translated (2.0f, 3.5f).expanded (1.0f));
+
+    // Rock mit Riffelung
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff4b423b), c.x - r * 0.4f, c.y - r * 0.6f,
+                                             juce::Colour (0xff110e0c), c.x + r * 0.7f, c.y + r * 0.9f, true));
     g.fillEllipse (knob);
-    g.setColour (theme::line.brighter (0.2f));
-    g.drawEllipse (knob, 1.0f);
-    g.setColour (slider.isEnabled() ? theme::bright : theme::textDim);
-    g.drawLine ({ c.getPointOnCircumference (knobR * 0.35f, toAngle), c.getPointOnCircumference (knobR - 3.0f, toAngle) }, 2.0f);
+    for (int k = 0; k < 48; ++k)
+    {
+        const float a = angle + (float) k * juce::MathConstants<float>::twoPi / 48.0f;
+        g.setColour ((k & 1) ? juce::Colours::white.withAlpha (0.07f) : juce::Colours::black.withAlpha (0.35f));
+        g.drawLine ({ c.getPointOnCircumference (r * 0.84f, a), c.getPointOnCircumference (r * 0.99f, a) }, 1.0f);
+    }
+
+    // Kappe (Bakelit)
+    const float capR = r * 0.68f;
+    const auto cap = juce::Rectangle<float> (capR * 2, capR * 2).withCentre (c);
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff5d534b), c.x - capR * 0.5f, c.y - capR * 0.6f,
+                                             juce::Colour (0xff17130f), c.x + capR, c.y + capR, true));
+    g.fillEllipse (cap);
+    g.setColour (juce::Colours::black.withAlpha (0.7f));
+    g.drawEllipse (cap, 1.0f);
+    g.setColour (juce::Colours::white.withAlpha (0.10f));
+    g.fillEllipse (juce::Rectangle<float> (capR * 0.9f, capR * 0.55f).withCentre (c.translated (-capR * 0.25f, -capR * 0.45f)));
+
+    // Zeiger
+    g.setColour (juce::Colours::black.withAlpha (0.4f));
+    g.drawLine ({ c.getPointOnCircumference (r * 0.22f, angle).translated (0.8f, 1.0f), c.getPointOnCircumference (r * 0.96f, angle).translated (0.8f, 1.0f) }, 2.6f);
+    g.setColour (cream);
+    g.drawLine ({ c.getPointOnCircumference (r * 0.22f, angle), c.getPointOnCircumference (r * 0.96f, angle) }, 2.4f);
+
+    // Wert anzeigen, solange die Maus darüber ist
+    if (slider.isMouseOverOrDragging() && slider.isEnabled())
+    {
+        const auto text = slider.getTextFromValue (slider.getValue());
+        const auto f = labelFontRegular (12.0f);
+        const float tw = (float) juce::GlyphArrangement::getStringWidthInt (f, text) + 12.0f;
+        const auto tag = juce::Rectangle<float> (tw, 15.0f).withCentre (tagArea.getCentre());
+        g.setColour (ink.withAlpha (0.9f));
+        g.fillRoundedRectangle (tag, 3.0f);
+        g.setColour (cream);
+        g.setFont (f);
+        g.drawText (text, tag, juce::Justification::centred);
+    }
 }
 
-void RaumLookAndFeel::drawToggleButton (juce::Graphics& g, juce::ToggleButton& b, bool over, bool)
+void VintageLookAndFeel::drawToggleButton (juce::Graphics& g, juce::ToggleButton& b, bool over, bool)
 {
-    const auto r = b.getLocalBounds().toFloat();
-    const auto sw = juce::Rectangle<float> (34.0f, 18.0f).withY (r.getCentreY() - 9.0f).withX (r.getX() + 2.0f);
+    auto r = b.getLocalBounds().toFloat();
+    const float h = r.getHeight();
     const bool on = b.getToggleState();
-    const auto accent = b.findColour (juce::ToggleButton::tickColourId);
+    const auto lamp = juce::Colour ((juce::uint32) (int) b.getProperties().getWithDefault ("lamp", (int) lampRed.getARGB()));
 
-    g.setColour (on ? accent.withAlpha (0.9f) : theme::line.brighter (over ? 0.15f : 0.0f));
-    g.fillRoundedRectangle (sw, 9.0f);
-    g.setColour (juce::Colours::white);
-    g.fillEllipse (juce::Rectangle<float> (14.0f, 14.0f).withCentre ({ on ? sw.getRight() - 9.0f : sw.getX() + 9.0f, sw.getCentreY() }));
+    drawJewel (g, r.removeFromLeft (h).reduced (h * 0.2f), lamp, on);
+    r.removeFromLeft (4.0f);
 
-    const bool header = b.getProperties()["header"];
-    g.setColour (header ? (on ? theme::bright : theme::textDim) : theme::text);
-    g.setFont (juce::FontOptions (header ? 14.0f : 13.0f, header ? juce::Font::bold : juce::Font::plain));
-    g.drawText (b.getButtonText(), r.withTrimmedLeft (sw.getRight() + 9.0f), juce::Justification::centredLeft);
+    // Kippschalter
+    const auto sw = r.removeFromLeft (h * 0.8f);
+    const auto c = sw.getCentre();
+    const float nutR = h * 0.2f;
+    g.setColour (juce::Colours::black.withAlpha (0.3f));
+    g.fillEllipse (juce::Rectangle<float> (nutR * 2.6f, nutR * 2.6f).withCentre (c.translated (0.8f, 1.2f)));
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xfff0f0f0), c.x - nutR, c.y - nutR, juce::Colour (0xff595959), c.x + nutR, c.y + nutR, false));
+    juce::Path hex;
+    for (int k = 0; k < 6; ++k)
+    {
+        const auto p = c.getPointOnCircumference (nutR * 1.3f, (float) k * juce::MathConstants<float>::pi / 3.0f + 0.52f);
+        if (k == 0) hex.startNewSubPath (p); else hex.lineTo (p);
+    }
+    hex.closeSubPath();
+    g.fillPath (hex);
+    g.setColour (juce::Colours::black.withAlpha (0.5f));
+    g.strokePath (hex, juce::PathStrokeType (0.7f));
+
+    const float len = h * 0.44f * (on ? -1.0f : 1.0f);
+    const juce::Point<float> tip { c.x, c.y + len };
+    juce::Path lever;
+    lever.startNewSubPath (c.x - 3.0f, c.y);
+    lever.lineTo (tip.x - 2.0f, tip.y);
+    lever.lineTo (tip.x + 2.0f, tip.y);
+    lever.lineTo (c.x + 3.0f, c.y);
+    lever.closeSubPath();
+    g.setColour (juce::Colours::black.withAlpha (0.35f));
+    g.fillPath (lever, juce::AffineTransform::translation (1.5f, 1.5f));
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xffffffff), c.x - 3.0f, c.y, juce::Colour (0xff7a7a7a), c.x + 3.0f, c.y, false));
+    g.fillPath (lever);
+    const auto ball = juce::Rectangle<float> (7.0f, 7.0f).withCentre (tip);
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xffffffff), ball.getX(), ball.getY(), juce::Colour (0xff666666), ball.getRight(), ball.getBottom(), false));
+    g.fillEllipse (ball);
+    g.setColour (juce::Colours::black.withAlpha (over ? 0.6f : 0.4f));
+    g.drawEllipse (ball, 0.7f);
+
+    // AN / AUS
+    if (! b.getButtonText().isEmpty())
+    {
+        g.setColour (ink);
+        g.setFont (labelFont (10.0f, 0.1f));
+        g.drawText ("AN",  r.withTrimmedLeft (4.0f).removeFromTop (h * 0.5f), juce::Justification::centredLeft);
+        g.drawText ("AUS", r.withTrimmedLeft (4.0f).removeFromBottom (h * 0.5f), juce::Justification::centredLeft);
+    }
+}
+
+void VintageLookAndFeel::drawComboBox (juce::Graphics& g, int w, int h, bool, int, int, int, int, juce::ComboBox& box)
+{
+    const auto r = juce::Rectangle<float> (0, 0, (float) w, (float) h);
+    const bool plate = box.getProperties()["plate"];
+
+    if (plate)
+    {
+        g.setGradientFill (juce::ColourGradient (cream.brighter (0.1f), 0, 0, creamDark, 0, (float) h, false));
+        g.fillRoundedRectangle (r, 3.0f);
+        g.setColour (juce::Colours::black.withAlpha (0.6f));
+        g.drawRoundedRectangle (r.reduced (0.5f), 3.0f, 1.0f);
+        drawScrew (g, { 9.0f, r.getCentreY() }, 4.0f, 0.6f);
+        drawScrew (g, { r.getRight() - 9.0f, r.getCentreY() }, 4.0f, 2.1f);
+    }
+    else
+    {
+        g.setGradientFill (juce::ColourGradient (juce::Colour (0xff3a322c), 0, 0, juce::Colour (0xff15110e), 0, (float) h, false));
+        g.fillRoundedRectangle (r, 4.0f);
+        g.setColour (juce::Colours::black);
+        g.drawRoundedRectangle (r.reduced (0.5f), 4.0f, 1.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.08f));
+        g.drawHorizontalLine (1, 3.0f, (float) w - 3.0f);
+    }
+
+    juce::Path arrow;
+    const float ax = plate ? r.getRight() - 26.0f : r.getRight() - 14.0f, ay = r.getCentreY();
+    arrow.addTriangle (ax - 4.5f, ay - 2.5f, ax + 4.5f, ay - 2.5f, ax, ay + 3.5f);
+    g.setColour (plate ? ink : cream.withAlpha (0.8f));
+    g.fillPath (arrow);
+}
+
+juce::Font VintageLookAndFeel::getComboBoxFont (juce::ComboBox& box)
+{
+    return box.getProperties()["plate"] ? labelFont (16.0f, 0.06f) : labelFontRegular (14.0f);
+}
+
+void VintageLookAndFeel::positionComboBoxText (juce::ComboBox& box, juce::Label& label)
+{
+    const bool plate = box.getProperties()["plate"];
+    label.setBounds (plate ? 18 : 6, 1, box.getWidth() - (plate ? 50 : 24), box.getHeight() - 2);
+    label.setFont (getComboBoxFont (box));
+    label.setColour (juce::Label::textColourId, plate ? ink : cream);
+    label.setJustificationType (plate ? juce::Justification::centred : juce::Justification::centredLeft);
+}
+
+juce::Font VintageLookAndFeel::getPopupMenuFont() { return labelFontRegular (15.0f); }
+
+//==============================================================================
+void VuMeter::update (float avg, float peak, float dt)
+{
+    const float vu = juce::Decibels::gainToDecibels (avg * 1.1107f, -80.0f) + 18.0f;   // 0 VU = -18 dBFS (Sinus)
+    const float target = juce::jlimit (0.0f, 1.12f, avg > 1.0e-6f ? vuToFraction (vu) : 0.0f);
+
+    // Zeiger mit Masse und Feder: ~300 ms Anstiegszeit, leichtes Überschwingen wie ein echtes VU-Meter
+    constexpr float omega = 13.0f, zeta = 0.78f;
+    const int steps = 4;
+    const float hstep = dt / (float) steps;
+    for (int i = 0; i < steps; ++i)
+    {
+        const float acc = omega * omega * (target - position) - 2.0f * zeta * omega * velocity;
+        velocity += acc * hstep;
+        position += velocity * hstep;
+        if (position < 0.0f)  { position = 0.0f;  velocity = 0.0f; }
+        if (position > 1.12f) { position = 1.12f; velocity = 0.0f; }
+    }
+
+    peakHold = peak > 0.891f ? 0.5f : juce::jmax (0.0f, peakHold - dt);
+    repaint();
+}
+
+void VuMeter::paint (juce::Graphics& g)
+{
+    const auto b = getLocalBounds().toFloat();
+
+    // Chromrahmen
+    g.setColour (juce::Colours::black.withAlpha (0.45f));
+    g.fillRoundedRectangle (b.translated (2.0f, 3.0f), 9.0f);
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xffeaeaea), 0, b.getY(), juce::Colour (0xff5f5f5f), 0, b.getBottom(), false));
+    g.fillRoundedRectangle (b, 9.0f);
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff5f5f5f), 0, b.getY(), juce::Colour (0xffdddddd), 0, b.getBottom(), false));
+    g.fillRoundedRectangle (b.reduced (3.0f), 7.0f);
+
+    const auto face = b.reduced (8.0f);
+    g.setColour (juce::Colours::black);
+    g.fillRoundedRectangle (face.expanded (1.5f), 5.0f);
+
+    // hinterleuchtetes Ziffernblatt
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xfff9edc4), face.getCentreX(), face.getBottom() - face.getHeight() * 0.25f,
+                                             juce::Colour (0xffcfa95e), face.getX(), face.getY(), true));
+    g.fillRoundedRectangle (face, 4.0f);
+
+    juce::Graphics::ScopedSaveState save (g);
+    g.reduceClipRegion (face.toNearestInt());
+
+    const juce::Point<float> pivot { face.getCentreX(), face.getBottom() + face.getHeight() * 0.38f };
+    const float radius = face.getHeight() * 0.92f;
+    constexpr float maxAngle = 0.70f;
+    auto angleFor = [] (float f) { return -maxAngle + 2.0f * maxAngle * f; };
+
+    // Skala
+    const float a0 = angleFor (vuToFraction (-20.0f)), aZero = angleFor (vuToFraction (0.0f)), aMax = angleFor (1.0f);
+    juce::Path blackArc, redArc;
+    blackArc.addCentredArc (pivot.x, pivot.y, radius, radius, 0.0f, a0, aZero, true);
+    redArc.addCentredArc (pivot.x, pivot.y, radius + 2.5f, radius + 2.5f, 0.0f, aZero, aMax, true);
+    g.setColour (ink);
+    g.strokePath (blackArc, juce::PathStrokeType (1.4f));
+    g.setColour (juce::Colour (0xffc0281b));
+    g.strokePath (redArc, juce::PathStrokeType (5.0f));
+
+    const float marks[] = { -20, -10, -7, -5, -3, -2, -1, 0, 1, 2, 3 };
+    for (float v : marks)
+    {
+        const float a = angleFor (vuToFraction (v));
+        const bool red = v > 0.0f;
+        g.setColour (red ? juce::Colour (0xffc0281b) : ink);
+        g.drawLine ({ pivot.getPointOnCircumference (radius, a), pivot.getPointOnCircumference (radius + 9.0f, a) }, 1.3f);
+        g.setFont (lnf.labelFontRegular (11.0f));
+        const auto lp = pivot.getPointOnCircumference (radius + 18.0f, a);
+        g.drawText (juce::String ((int) std::abs (v)), juce::Rectangle<float> (20.0f, 12.0f).withCentre (lp), juce::Justification::centred);
+    }
+    // feine Zwischenstriche
+    g.setColour (ink.withAlpha (0.6f));
+    for (int step = -40; step < 6; ++step)
+    {
+        if (step < -20 && step % 4 != 0) continue;
+        const float a = angleFor (vuToFraction ((float) step * 0.5f));
+        g.drawLine ({ pivot.getPointOnCircumference (radius, a), pivot.getPointOnCircumference (radius + 4.0f, a) }, 0.7f);
+    }
+
+    g.setColour (ink);
+    g.setFont (lnf.labelFont (20.0f, 0.1f));
+    g.drawText ("VU", juce::Rectangle<float> (60.0f, 24.0f).withCentre ({ face.getCentreX(), face.getY() + face.getHeight() * 0.68f }), juce::Justification::centred);
+    g.setFont (lnf.labelFont (11.0f, 0.1f));
+    g.setColour (ink.withAlpha (0.7f));
+    g.drawText (name, juce::Rectangle<float> (face.getX() + 8.0f, face.getBottom() - 20.0f, 20.0f, 14.0f), juce::Justification::centredLeft);
+
+    // Peak-Lampe
+    const auto led = juce::Rectangle<float> (11.0f, 11.0f).withPosition (face.getRight() - 19.0f, face.getBottom() - 19.0f);
+    VintageLookAndFeel::drawJewel (g, led, lampRed, peakHold > 0.0f);
+    g.setFont (lnf.labelFont (9.0f, 0.1f));
+    g.setColour (ink.withAlpha (0.7f));
+    g.drawText ("PEAK", led.withX (led.getX() - 34.0f).withWidth (30.0f), juce::Justification::centredRight);
+
+    // Zeiger
+    const float na = angleFor (position);
+    const auto tip = pivot.getPointOnCircumference (radius + 14.0f, na);
+    g.setColour (juce::Colours::black.withAlpha (0.18f));
+    g.drawLine ({ pivot.translated (3.0f, 2.0f), tip.translated (3.0f, 2.0f) }, 1.6f);
+    g.setColour (juce::Colour (0xff1a1410));
+    g.drawLine ({ pivot, tip }, 1.5f);
+
+    // Abdeckung über dem Drehpunkt
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff3a3029), face.getCentreX(), face.getBottom() - 14.0f,
+                                             juce::Colour (0xff120e0b), face.getCentreX(), face.getBottom(), false));
+    g.fillEllipse (juce::Rectangle<float> (face.getWidth() * 0.42f, face.getHeight() * 0.34f).withCentre ({ face.getCentreX(), face.getBottom() + 2.0f }));
+
+    // Glas
+    g.setGradientFill (juce::ColourGradient (juce::Colours::white.withAlpha (0.28f), face.getX(), face.getY(),
+                                             juce::Colours::white.withAlpha (0.0f), face.getX() + face.getWidth() * 0.4f, face.getY() + face.getHeight() * 0.6f, false));
+    g.fillRoundedRectangle (face, 4.0f);
 }
 
 //==============================================================================
@@ -83,52 +364,48 @@ RaumAudioProcessorEditor::RaumAudioProcessorEditor (RaumAudioProcessor& p)
 {
     setLookAndFeel (&lnf);
 
-    setupPower (dOn, "d_on", theme::doubler);
-    setupPower (eOn, "e_on", theme::echo);
-    setupPower (sOn, "s_on", theme::spring);
+    setupSwitch (dOn, "d_on", lampRed);
+    setupSwitch (eOn, "e_on", lampRed);
+    setupSwitch (sOn, "s_on", lampRed);
+    setupSwitch (pingPong, "e_pp", lampAmber);
     for (auto* b : { &dOn, &eOn, &sOn })
-        b->getProperties().set ("header", true);
-    setupPower (pingPong, "e_pp", theme::echo);
+        b->setButtonText ("on");   // zeigt "AN/AUS" neben dem Schalter
 
-    dMix   = &addKnob ("d_mix",   "MIX",    theme::doubler);
-    dWidth = &addKnob ("d_width", "BREITE", theme::doubler);
-    dDepth = &addKnob ("d_depth", "TIEFE",  theme::doubler);
-
-    eTime = &addKnob ("e_time", "ZEIT",     theme::echo);
-    eFb   = &addKnob ("e_fb",   "FEEDBACK", theme::echo);
-    eMix  = &addKnob ("e_mix",  "MIX",      theme::echo);
-    eTone = &addKnob ("e_tone", "TON",      theme::echo);
-    eWow  = &addKnob ("e_wow",  "WOW",      theme::echo);
-
-    sMix   = &addKnob ("s_mix",   "MIX",   theme::spring);
-    sDecay = &addKnob ("s_decay", juce::CharPointer_UTF8 ("L\xc3\x84NGE"), theme::spring);
-    sTone  = &addKnob ("s_tone",  "TON",   theme::spring);
-    sDwell = &addKnob ("s_dwell", "DWELL", theme::spring);
-
-    outKnob = &addKnob ("out", "OUTPUT", theme::bright);
+    dMix   = &addKnob ("d_mix",   "MIX",    0);
+    dWidth = &addKnob ("d_width", "BREITE", 0);
+    dDepth = &addKnob ("d_depth", "TIEFE",  0);
+    eTime  = &addKnob ("e_time",  "ZEIT",   1);
+    eFb    = &addKnob ("e_fb",    "FEEDBACK", 1);
+    eMix   = &addKnob ("e_mix",   "MIX",    1);
+    eTone  = &addKnob ("e_tone",  "TON",    1);
+    eWow   = &addKnob ("e_wow",   "WOW",    1);
+    sMix   = &addKnob ("s_mix",   "MIX",    2);
+    sDecay = &addKnob ("s_decay", juce::String (juce::CharPointer_UTF8 ("L\xc3\x84NGE")), 2);
+    sTone  = &addKnob ("s_tone",  "TON",    2);
+    sDwell = &addKnob ("s_dwell", "DWELL",  2);
+    outKnob = &addKnob ("out",    "PEGEL",  3);
 
     syncBox.addItemList (RaumAudioProcessor::syncNames(), 1);
     addAndMakeVisible (syncBox);
     syncAttachment = std::make_unique<ComboAttachment> (proc.apvts, "e_sync", syncBox);
-    pingPongLabel.setText ("PING-PONG", juce::dontSendNotification);
-    pingPongLabel.setFont (juce::FontOptions (11.0f, juce::Font::bold));
-    addAndMakeVisible (pingPongLabel);
-    syncLabel.setText ("SYNC", juce::dontSendNotification);
-    syncLabel.setFont (juce::FontOptions (11.0f, juce::Font::bold));
-    addAndMakeVisible (syncLabel);
 
+    presetBox.getProperties().set ("plate", true);
     for (int i = 0; i < proc.getNumPrograms(); ++i)
         presetBox.addItem (proc.getProgramName (i), i + 1);
     presetBox.setSelectedId (proc.getCurrentProgram() + 1, juce::dontSendNotification);
     presetBox.onChange = [this] { proc.setCurrentProgram (presetBox.getSelectedId() - 1); };
     addAndMakeVisible (presetBox);
-    presetLabel.setText ("PRESET", juce::dontSendNotification);
-    presetLabel.setFont (juce::FontOptions (11.0f, juce::Font::bold));
-    presetLabel.setJustificationType (juce::Justification::centredRight);
-    addAndMakeVisible (presetLabel);
 
-    setSize (990, 380);
-    startTimerHz (30);
+    addAndMakeVisible (vuLeft);
+    addAndMakeVisible (vuRight);
+
+    sections[0] = { "DOUBLER",   {}, &dOn };
+    sections[1] = { "BANDECHO",  {}, &eOn };
+    sections[2] = { "FEDERHALL", {}, &sOn };
+    sections[3] = { "AUSGANG",   {}, nullptr };
+
+    setSize (1000, 540);
+    startTimerHz (60);
 }
 
 RaumAudioProcessorEditor::~RaumAudioProcessorEditor()
@@ -137,21 +414,16 @@ RaumAudioProcessorEditor::~RaumAudioProcessorEditor()
     setLookAndFeel (nullptr);
 }
 
-RaumAudioProcessorEditor::Knob& RaumAudioProcessorEditor::addKnob (const juce::String& paramID, const juce::String& text, juce::Colour accent)
+RaumAudioProcessorEditor::Knob& RaumAudioProcessorEditor::addKnob (const juce::String& paramID, const juce::String& name, int section)
 {
     auto k = std::make_unique<Knob>();
+    k->name = name;
+    k->section = section;
     k->slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
-    k->slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 90, 18);
-    k->slider.setRotaryParameters (juce::MathConstants<float>::pi * 1.25f, juce::MathConstants<float>::pi * 2.75f, true);
-    k->slider.setColour (juce::Slider::rotarySliderFillColourId, accent);
-    k->slider.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-    k->slider.setColour (juce::Slider::textBoxBackgroundColourId, juce::Colours::transparentBlack);
-    k->slider.setColour (juce::Slider::textBoxTextColourId, theme::text);
-    k->label.setText (text, juce::dontSendNotification);
-    k->label.setJustificationType (juce::Justification::centred);
-    k->label.setFont (juce::FontOptions (11.0f, juce::Font::bold));
+    k->slider.setTextBoxStyle (juce::Slider::NoTextBox, true, 0, 0);
+    k->slider.setRotaryParameters (juce::MathConstants<float>::pi * 1.2f, juce::MathConstants<float>::pi * 2.8f, true);
+    k->slider.setMouseDragSensitivity (220);
     addAndMakeVisible (k->slider);
-    addAndMakeVisible (k->label);
     k->attachment = std::make_unique<SliderAttachment> (proc.apvts, paramID, k->slider);
     if (auto* rp = proc.apvts.getParameter (paramID))
         k->slider.setDoubleClickReturnValue (true, rp->convertFrom0to1 (rp->getDefaultValue()));
@@ -159,206 +431,219 @@ RaumAudioProcessorEditor::Knob& RaumAudioProcessorEditor::addKnob (const juce::S
     return *knobs.back();
 }
 
-void RaumAudioProcessorEditor::setupPower (juce::ToggleButton& b, const juce::String& paramID, juce::Colour accent)
+void RaumAudioProcessorEditor::setupSwitch (juce::ToggleButton& b, const juce::String& paramID, juce::Colour lamp)
 {
-    b.setColour (juce::ToggleButton::tickColourId, accent);
+    b.getProperties().set ("lamp", (int) lamp.getARGB());
     addAndMakeVisible (b);
     buttonAttachments.push_back (std::make_unique<ButtonAttachment> (proc.apvts, paramID, b));
 }
 
 void RaumAudioProcessorEditor::timerCallback()
 {
-    const bool d = dOn.getToggleState(), e = eOn.getToggleState(), s = sOn.getToggleState();
-    for (auto* k : { dMix, dWidth, dDepth }) k->setActive (d);
-    for (auto* k : { eTime, eFb, eMix, eTone, eWow }) k->setActive (e);
-    for (auto* k : { sMix, sDecay, sTone, sDwell }) k->setActive (s);
-    syncBox.setAlpha (e ? 1.0f : 0.4f);
-    pingPong.setAlpha (e ? 1.0f : 0.4f);
-    pingPongLabel.setAlpha (e ? 1.0f : 0.4f);
+    constexpr float dt = 1.0f / 60.0f;
+    vuLeft.update (proc.vuL.load(), proc.meterL.exchange (0.0f), dt);
+    vuRight.update (proc.vuR.load(), proc.meterR.exchange (0.0f), dt);
 
-    const bool free = syncBox.getSelectedId() <= 1;
-    eTime->slider.setEnabled (free);
+    const bool on[] = { dOn.getToggleState(), eOn.getToggleState(), sOn.getToggleState(), true };
+    for (auto& k : knobs)
+        k->slider.setAlpha (on[k->section] ? 1.0f : 0.55f);
+    syncBox.setAlpha (on[1] ? 1.0f : 0.55f);
+    pingPong.setAlpha (on[1] ? 1.0f : 0.55f);
+    eTime->slider.setEnabled (syncBox.getSelectedId() <= 1);
 
     if (presetBox.getSelectedId() != proc.getCurrentProgram() + 1)
         presetBox.setSelectedId (proc.getCurrentProgram() + 1, juce::dontSendNotification);
-
-    if (e) reelAngle += 0.06f;
-    springPhase += 0.35f;
-    meterL = juce::jmax (proc.meterL.load(), meterL * 0.85f);
-    meterR = juce::jmax (proc.meterR.load(), meterR * 0.85f);
-    proc.meterL.store (0.0f);
-    proc.meterR.store (0.0f);
-    repaint();
 }
 
 //==============================================================================
-void RaumAudioProcessorEditor::drawPanel (juce::Graphics& g, juce::Rectangle<int> r, juce::Colour accent, bool active)
+void RaumAudioProcessorEditor::renderTextures()
 {
-    const auto rf = r.toFloat();
-    g.setColour (theme::panel);
-    g.fillRoundedRectangle (rf, 10.0f);
-    g.setColour (active ? accent.withAlpha (0.55f) : theme::line);
-    g.drawRoundedRectangle (rf.reduced (0.5f), 10.0f, 1.0f);
-    // farbiger Streifen oben
-    g.setColour (active ? accent : theme::line);
-    g.fillRoundedRectangle (rf.withHeight (3.0f).reduced (14.0f, 0.0f), 1.5f);
-}
-
-void RaumAudioProcessorEditor::drawReels (juce::Graphics& g, juce::Rectangle<float> area, bool active)
-{
-    const auto col = active ? theme::echo : theme::textDim.withAlpha (0.5f);
-    const float rad = area.getHeight() * 0.42f;
-    const juce::Point<float> c1 { area.getCentreX() - rad * 1.25f, area.getCentreY() };
-    const juce::Point<float> c2 { area.getCentreX() + rad * 1.25f, area.getCentreY() };
-    for (auto [c, rr] : { std::pair { c1, rad }, std::pair { c2, rad * 0.8f } })
+    // Tolex-Bezug
+    tolexImage = juce::Image (juce::Image::RGB, juce::jmax (1, getWidth()), juce::jmax (1, getHeight()), false);
     {
-        g.setColour (col.withAlpha (0.25f));
-        g.fillEllipse (juce::Rectangle<float> (rr * 2, rr * 2).withCentre (c));
-        g.setColour (col);
-        g.drawEllipse (juce::Rectangle<float> (rr * 2, rr * 2).withCentre (c), 1.5f);
-        for (int k = 0; k < 3; ++k)
-        {
-            const float a = reelAngle + (float) k * juce::MathConstants<float>::twoPi / 3.0f;
-            g.drawLine ({ c.getPointOnCircumference (rr * 0.25f, a), c.getPointOnCircumference (rr * 0.85f, a) }, 1.5f);
-        }
+        juce::Image::BitmapData data (tolexImage, juce::Image::BitmapData::writeOnly);
+        juce::Random rnd (7);
+        for (int y = 0; y < tolexImage.getHeight(); ++y)
+            for (int x = 0; x < tolexImage.getWidth(); ++x)
+            {
+                const int weave = ((x + y) % 4 == 0 || (x - y + 4096) % 4 == 0) ? -5 : 0;
+                const int n = rnd.nextInt (13) - 6 + weave;
+                data.setPixelColour (x, y, juce::Colour ((juce::uint8) juce::jlimit (0, 255, 34 + n),
+                                                         (juce::uint8) juce::jlimit (0, 255, 28 + n),
+                                                         (juce::uint8) juce::jlimit (0, 255, 24 + n)));
+            }
     }
-    g.setColour (col.withAlpha (0.7f));
-    g.drawLine (c1.x, c1.y + rad, c2.x, c2.y + rad * 0.8f, 1.2f);
-}
 
-void RaumAudioProcessorEditor::drawSpring (juce::Graphics& g, juce::Rectangle<float> area, bool active)
-{
-    const auto col = active ? theme::spring : theme::textDim.withAlpha (0.5f);
-    const float wobble = active ? juce::jlimit (0.0f, 1.0f, (meterL + meterR) * 1.5f) : 0.0f;
-    juce::Path p;
-    const int coils = 9;
-    for (int i = 0; i <= coils * 8; ++i)
+    // gebürstete Frontplatte
+    if (faceplate.isEmpty())
+        return;
+    faceplateImage = juce::Image (juce::Image::ARGB, faceplate.getWidth(), faceplate.getHeight(), true);
+    juce::Graphics g (faceplateImage);
+    const auto r = faceplateImage.getBounds().toFloat();
+    g.setGradientFill (juce::ColourGradient (cream.brighter (0.06f), 0, 0, creamDark, 0, r.getHeight(), false));
+    g.fillRoundedRectangle (r, 6.0f);
+    juce::Random rnd (3);
+    for (int y = 0; y < faceplate.getHeight(); ++y)
     {
-        const float t = (float) i / (float) (coils * 8);
-        const float x = area.getX() + t * area.getWidth();
-        const float amp = area.getHeight() * 0.4f * (1.0f + 0.25f * wobble * std::sin (springPhase + t * 6.0f));
-        const float y = area.getCentreY() + amp * std::sin (t * (float) coils * juce::MathConstants<float>::twoPi);
-        if (i == 0) p.startNewSubPath (x, y); else p.lineTo (x, y);
+        const bool light = rnd.nextBool();
+        g.setColour ((light ? juce::Colours::white : juce::Colour (0xff6b5534)).withAlpha (0.015f + rnd.nextFloat() * 0.035f));
+        g.drawHorizontalLine (y, 0.0f, r.getWidth());
     }
-    g.setColour (col);
-    g.strokePath (p, juce::PathStrokeType (1.5f));
+    // leichte Vergilbung an den Rändern
+    g.setGradientFill (juce::ColourGradient (juce::Colours::transparentBlack, r.getCentreX(), r.getCentreY(),
+                                             juce::Colour (0x30694a1c), 0, 0, true));
+    g.fillRoundedRectangle (r, 6.0f);
 }
 
-void RaumAudioProcessorEditor::drawDoublerIcon (juce::Graphics& g, juce::Rectangle<float> area, bool active)
+void RaumAudioProcessorEditor::drawEngraved (juce::Graphics& g, const juce::String& text, juce::Rectangle<float> r,
+                                             juce::Font f, juce::Justification j)
 {
-    const auto col = active ? theme::doubler : theme::textDim.withAlpha (0.5f);
-    const float r = area.getHeight() * 0.38f;
-    const auto c = area.getCentre();
-    g.setColour (col.withAlpha (0.3f));
-    g.fillEllipse (juce::Rectangle<float> (r * 2, r * 2).withCentre (c.translated (-r * 0.55f, 0)));
-    g.setColour (col);
-    g.drawEllipse (juce::Rectangle<float> (r * 2, r * 2).withCentre (c.translated (-r * 0.55f, 0)), 1.5f);
-    g.drawEllipse (juce::Rectangle<float> (r * 2, r * 2).withCentre (c.translated (r * 0.55f, 0)), 1.5f);
+    g.setFont (f);
+    g.setColour (juce::Colours::white.withAlpha (0.55f));
+    g.drawText (text, r.translated (0.0f, 1.0f), j);
+    g.setColour (ink);
+    g.drawText (text, r, j);
 }
 
 void RaumAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (theme::background);
+    g.drawImageAt (tolexImage, 0, 0);
 
-    auto header = getLocalBounds().removeFromTop (56).reduced (18, 0);
-    g.setColour (theme::bright);
-    g.setFont (juce::FontOptions (19.0f, juce::Font::bold));
-    g.drawText ("KLANGBILD", header, juce::Justification::centredLeft);
-    const int w = juce::GlyphArrangement::getStringWidthInt (juce::FontOptions (19.0f, juce::Font::bold), "KLANGBILD");
-    g.setColour (theme::echo);
-    g.setFont (juce::FontOptions (19.0f));
-    g.drawText ("RAUM", header.withTrimmedLeft (w + 8), juce::Justification::centredLeft);
-    g.setColour (theme::textDim);
-    g.setFont (juce::FontOptions (12.0f));
-    const int w2 = juce::GlyphArrangement::getStringWidthInt (juce::FontOptions (19.0f), "RAUM");
-    g.drawText (juce::CharPointer_UTF8 ("Doubler \xc2\xb7 Bandecho \xc2\xb7 Federhall"),
-                header.withTrimmedLeft (w + w2 + 24), juce::Justification::centredLeft);
+    // Logo
+    const auto scriptF = lnf.scriptFont (64.0f);
+    const auto logoArea = juce::Rectangle<float> (40.0f, 8.0f, 400.0f, 84.0f);
+    g.setFont (scriptF);
+    g.setColour (juce::Colours::black.withAlpha (0.55f));
+    g.drawText ("Klangbild", logoArea.translated (2.0f, 3.0f), juce::Justification::centredLeft);
+    g.setColour (logo);
+    g.drawText ("Klangbild", logoArea, juce::Justification::centredLeft);
+    const float sw = (float) juce::GlyphArrangement::getStringWidthInt (scriptF, "Klangbild");
+    g.setColour (gold);
+    g.setFont (lnf.labelFont (26.0f, 0.35f));
+    g.drawText ("RAUM", juce::Rectangle<float> (logoArea.getX() + sw + 14.0f, logoArea.getY() + 30.0f, 120.0f, 40.0f), juce::Justification::centredLeft);
+    g.setColour (logo.withAlpha (0.55f));
+    g.setFont (lnf.labelFont (12.0f, 0.3f));
+    g.drawText (juce::CharPointer_UTF8 ("DOUBLER \xc2\xb7 BANDECHO \xc2\xb7 FEDERHALL"), juce::Rectangle<float> (44.0f, 90.0f, 400.0f, 16.0f),
+                juce::Justification::centredLeft);
+    g.setColour (logo.withAlpha (0.6f));
+    g.setFont (lnf.labelFont (10.0f, 0.3f));
+    g.drawText ("PROGRAMM", presetArea.toFloat().withY ((float) presetArea.getY() - 15.0f).withHeight (13.0f), juce::Justification::centredLeft);
 
-    const bool d = dOn.getToggleState(), e = eOn.getToggleState(), s = sOn.getToggleState();
-    drawPanel (g, dPanel, theme::doubler, d);
-    drawPanel (g, ePanel, theme::echo, e);
-    drawPanel (g, sPanel, theme::spring, s);
-    drawPanel (g, oPanel, theme::bright, true);
+    // Keder um die Frontplatte
+    const auto fp = faceplate.toFloat();
+    g.setColour (juce::Colours::black.withAlpha (0.6f));
+    g.fillRoundedRectangle (fp.expanded (4.0f).translated (0, 2.0f), 9.0f);
+    g.setGradientFill (juce::ColourGradient (gold.brighter (0.3f), 0, fp.getY(), gold.darker (0.6f), 0, fp.getBottom(), false));
+    g.fillRoundedRectangle (fp.expanded (3.0f), 8.0f);
+    g.drawImageAt (faceplateImage, faceplate.getX(), faceplate.getY());
+    g.setColour (juce::Colours::black.withAlpha (0.35f));
+    g.drawRoundedRectangle (fp, 6.0f, 1.0f);
 
-    auto iconArea = [] (juce::Rectangle<int> panel, float width)
+    for (auto [x, y, a] : { std::tuple { fp.getX() + 12.0f, fp.getY() + 12.0f, 0.4f }, std::tuple { fp.getRight() - 12.0f, fp.getY() + 12.0f, 1.3f },
+                            std::tuple { fp.getX() + 12.0f, fp.getBottom() - 12.0f, 2.2f }, std::tuple { fp.getRight() - 12.0f, fp.getBottom() - 12.0f, 0.9f } })
+        VintageLookAndFeel::drawScrew (g, { x, y }, 5.0f, a);
+
+    // Sektionen
+    for (size_t i = 0; i < sections.size(); ++i)
     {
-        return panel.toFloat().removeFromTop (46.0f).removeFromRight (width + 16.0f).withTrimmedRight (16.0f).reduced (0.0f, 14.0f);
-    };
-    drawDoublerIcon (g, iconArea (dPanel, 36.0f), d);
-    drawReels (g, iconArea (ePanel, 46.0f), e);
-    drawSpring (g, iconArea (sPanel, 70.0f), s);
+        const auto& s = sections[i];
+        const auto sb = s.bounds.toFloat();
+        drawEngraved (g, s.title, sb.withHeight (36.0f).withTrimmedTop (4.0f), lnf.labelFont (18.0f, 0.22f), juce::Justification::centredLeft);
+        g.setColour (ink.withAlpha (0.5f));
+        g.drawHorizontalLine ((int) sb.getY() + 40, sb.getX(), sb.getRight());
+        g.setColour (juce::Colours::white.withAlpha (0.5f));
+        g.drawHorizontalLine ((int) sb.getY() + 41, sb.getX(), sb.getRight());
 
-    // Pegelanzeige im Output-Feld
-    auto meter = oPanel.reduced (14).withTrimmedTop (150).toFloat();
-    meter = meter.withSizeKeepingCentre (26.0f, meter.getHeight());
-    auto drawBar = [&] (juce::Rectangle<float> bar, float level)
+        if (i + 1 < sections.size())
+        {
+            const float x = (sb.getRight() + sections[i + 1].bounds.toFloat().getX()) * 0.5f;
+            for (float dx : { -2.0f, 2.0f })
+            {
+                g.setColour (ink.withAlpha (0.35f));
+                g.drawVerticalLine ((int) (x + dx), sb.getY(), sb.getBottom());
+                g.setColour (juce::Colours::white.withAlpha (0.45f));
+                g.drawVerticalLine ((int) (x + dx) + 1, sb.getY(), sb.getBottom());
+            }
+        }
+    }
+
+    for (auto& k : knobs)
     {
-        g.setColour (theme::inset);
-        g.fillRoundedRectangle (bar, 3.0f);
-        const float db = juce::Decibels::gainToDecibels (level, -60.0f);
-        const float h = bar.getHeight() * juce::jlimit (0.0f, 1.0f, (db + 60.0f) / 60.0f);
-        g.setColour (db > -1.0f ? juce::Colour (0xffe05d5d) : theme::doubler);
-        g.fillRoundedRectangle (bar.withTop (bar.getBottom() - h), 3.0f);
-    };
-    drawBar (meter.removeFromLeft (11.0f), meterL);
-    meter.removeFromLeft (4.0f);
-    drawBar (meter.removeFromLeft (11.0f), meterR);
+        const auto sb = k->slider.getBounds().toFloat();
+        drawEngraved (g, k->name, juce::Rectangle<float> (sb.getX(), sb.getBottom() - 2.0f, sb.getWidth(), 18.0f),
+                      lnf.labelFont (13.0f, 0.14f), juce::Justification::centred);
+    }
+
+    drawEngraved (g, "SYNC", syncLabelArea.toFloat(), lnf.labelFont (12.0f, 0.14f), juce::Justification::centredLeft);
+    drawEngraved (g, "PING-PONG", pingPongLabelArea.toFloat(), lnf.labelFont (12.0f, 0.14f), juce::Justification::centredLeft);
+
+    // Betriebslampe und Typenschild
+    const auto pa = pilotArea.toFloat();
+    VintageLookAndFeel::drawJewel (g, juce::Rectangle<float> (34.0f, 34.0f).withCentre ({ pa.getCentreX(), pa.getY() + 30.0f }), lampRed, true);
+    drawEngraved (g, "BETRIEB", juce::Rectangle<float> (pa.getX(), pa.getY() + 52.0f, pa.getWidth(), 16.0f), lnf.labelFont (12.0f, 0.14f), juce::Justification::centred);
+    const auto tag = juce::Rectangle<float> (pa.getWidth() - 20.0f, 26.0f).withCentre ({ pa.getCentreX(), pa.getBottom() - 22.0f });
+    g.setColour (ink.withAlpha (0.85f));
+    g.fillRoundedRectangle (tag, 3.0f);
+    g.setColour (gold);
+    g.setFont (lnf.labelFont (11.0f, 0.2f));
+    g.drawText ("MODELL KR-1", tag, juce::Justification::centred);
 }
 
 void RaumAudioProcessorEditor::resized()
 {
-    auto area = getLocalBounds();
-    auto header = area.removeFromTop (56).reduced (18, 13);
-    presetBox.setBounds (header.removeFromRight (200));
-    presetLabel.setBounds (header.removeFromRight (80).withTrimmedRight (8));
+    const int W = getWidth();
 
-    area = area.reduced (14, 0).withTrimmedBottom (14);
-    dPanel = area.removeFromLeft (230); area.removeFromLeft (12);
-    ePanel = area.removeFromLeft (330); area.removeFromLeft (12);
-    sPanel = area.removeFromLeft (260); area.removeFromLeft (12);
-    oPanel = area;
+    vuRight.setBounds (W - 36 - 200, 20, 200, 130);
+    vuLeft.setBounds (W - 36 - 200 - 16 - 200, 20, 200, 130);
 
-    constexpr int rowH = 128, cellW = 100;
-    auto layoutPanel = [&] (juce::Rectangle<int> panel, juce::ToggleButton& power)
+    presetArea = { 44, 128, 270, 32 };
+    presetBox.setBounds (presetArea);
+
+    faceplate = { 24, 176, W - 48, 344 };
+    auto inner = faceplate.reduced (24, 14);
+    const int widths[] = { 205, 318, 212, 140 };
+    const int gap = (inner.getWidth() - (widths[0] + widths[1] + widths[2] + widths[3])) / 3;
+    for (size_t i = 0; i < sections.size(); ++i)
     {
-        auto inner = panel.reduced (14, 8);
-        power.setBounds (inner.removeFromTop (38).withTrimmedTop (6).withWidth (160));
-        return inner;
+        sections[i].bounds = inner.removeFromLeft (widths[i]).withHeight (inner.getHeight());
+        inner.removeFromLeft (gap);
+        if (sections[i].power != nullptr)
+            sections[i].power->setBounds (sections[i].bounds.getRight() - 84, sections[i].bounds.getY() + 2, 84, 34);
+    }
+
+    constexpr int rowH = 138, sliderH = 116;
+    auto cell = [&] (int section, int row, int col, int cols)
+    {
+        const auto sb = sections[(size_t) section].bounds;
+        const int cw = sb.getWidth() / cols;
+        return juce::Rectangle<int> (sb.getX() + col * cw, sb.getY() + 46 + row * rowH, cw, sliderH);
     };
 
+    dMix->slider.setBounds   (cell (0, 0, 0, 2));
+    dWidth->slider.setBounds (cell (0, 0, 1, 2));
+    dDepth->slider.setBounds (cell (0, 1, 0, 2));
+
+    eTime->slider.setBounds (cell (1, 0, 0, 3));
+    eFb->slider.setBounds   (cell (1, 0, 1, 3));
+    eMix->slider.setBounds  (cell (1, 0, 2, 3));
+    eTone->slider.setBounds (cell (1, 1, 0, 3));
+    eWow->slider.setBounds  (cell (1, 1, 1, 3));
     {
-        auto in = layoutPanel (dPanel, dOn);
-        auto row1 = in.removeFromTop (rowH), row2 = in.removeFromTop (rowH);
-        dMix->setBounds (row1.removeFromLeft (cellW));
-        dWidth->setBounds (row1.removeFromLeft (cellW));
-        dDepth->setBounds (row2.removeFromLeft (cellW));
+        auto c = cell (1, 1, 2, 3).reduced (6, 4);
+        syncLabelArea = c.removeFromTop (16);
+        syncBox.setBounds (c.removeFromTop (26));
+        c.removeFromTop (12);
+        pingPongLabelArea = c.removeFromTop (16);
+        pingPong.setBounds (c.removeFromTop (36).withWidth (70));
     }
-    {
-        auto in = layoutPanel (ePanel, eOn);
-        auto row1 = in.removeFromTop (rowH), row2 = in.removeFromTop (rowH);
-        eTime->setBounds (row1.removeFromLeft (cellW));
-        eFb->setBounds (row1.removeFromLeft (cellW));
-        eMix->setBounds (row1.removeFromLeft (cellW));
-        eTone->setBounds (row2.removeFromLeft (cellW));
-        eWow->setBounds (row2.removeFromLeft (cellW));
-        auto ctl = row2.reduced (4, 0);
-        syncLabel.setBounds (ctl.removeFromTop (16));
-        syncBox.setBounds (ctl.removeFromTop (26));
-        ctl.removeFromTop (10);
-        pingPongLabel.setBounds (ctl.removeFromTop (16));
-        pingPong.setBounds (ctl.removeFromTop (26));
-    }
-    {
-        auto in = layoutPanel (sPanel, sOn);
-        auto row1 = in.removeFromTop (rowH), row2 = in.removeFromTop (rowH);
-        const int cw = in.getWidth() / 2;
-        sMix->setBounds (row1.removeFromLeft (cw));
-        sDecay->setBounds (row1.removeFromLeft (cw));
-        sTone->setBounds (row2.removeFromLeft (cw));
-        sDwell->setBounds (row2.removeFromLeft (cw));
-    }
-    {
-        auto in = oPanel.reduced (6, 8).withTrimmedTop (18);
-        outKnob->setBounds (in.removeFromTop (rowH));
-    }
+
+    sMix->slider.setBounds   (cell (2, 0, 0, 2));
+    sDecay->slider.setBounds (cell (2, 0, 1, 2));
+    sTone->slider.setBounds  (cell (2, 1, 0, 2));
+    sDwell->slider.setBounds (cell (2, 1, 1, 2));
+
+    outKnob->slider.setBounds (cell (3, 0, 0, 1).withSizeKeepingCentre (110, sliderH));
+    pilotArea = cell (3, 1, 0, 1).withHeight (rowH);
+
+    renderTextures();
 }

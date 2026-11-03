@@ -3,29 +3,66 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
 
-namespace theme
+namespace vintage
 {
-const juce::Colour background { 0xff14161b };
-const juce::Colour panel      { 0xff1c1f26 };
-const juce::Colour inset      { 0xff101216 };
-const juce::Colour line       { 0xff343945 };
-const juce::Colour text       { 0xffc9ced8 };
-const juce::Colour textDim    { 0xff7d8493 };
-const juce::Colour bright     { 0xfff2f4f8 };
-const juce::Colour doubler    { 0xff4cc3b0 };
-const juce::Colour echo       { 0xffe8914a };
-const juce::Colour spring     { 0xff9a7be8 };
+const juce::Colour tolex      { 0xff221c18 };
+const juce::Colour cream      { 0xffe8dcc0 };
+const juce::Colour creamDark  { 0xffd3c4a2 };
+const juce::Colour ink        { 0xff3b2a1e };   // gravierte Schrift
+const juce::Colour inkLight   { 0xff7a6450 };
+const juce::Colour gold       { 0xffc9a25a };
+const juce::Colour logo       { 0xfff1e4c3 };
+const juce::Colour lampRed    { 0xffff4a2a };
+const juce::Colour lampAmber  { 0xffffa726 };
+const juce::Colour lampGreen  { 0xff8bd450 };
 }
 
-class RaumLookAndFeel : public juce::LookAndFeel_V4
+//==============================================================================
+class VintageLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
-    RaumLookAndFeel();
+    VintageLookAndFeel();
+
+    juce::Font labelFont (float height, float kerning = 0.08f) const;
+    juce::Font labelFontRegular (float height) const;
+    juce::Font scriptFont (float height) const;
+
     void drawRotarySlider (juce::Graphics&, int x, int y, int w, int h, float pos,
                            float startAngle, float endAngle, juce::Slider&) override;
     void drawToggleButton (juce::Graphics&, juce::ToggleButton&, bool over, bool down) override;
+    void drawComboBox (juce::Graphics&, int w, int h, bool down, int bx, int by, int bw, int bh, juce::ComboBox&) override;
+    juce::Font getComboBoxFont (juce::ComboBox&) override;
+    void positionComboBoxText (juce::ComboBox&, juce::Label&) override;
+    juce::Font getPopupMenuFont() override;
+    juce::Label* createSliderTextBox (juce::Slider&) override;
+
+    static void drawJewel (juce::Graphics&, juce::Rectangle<float>, juce::Colour colour, bool lit);
+    static void drawScrew (juce::Graphics&, juce::Point<float> centre, float radius, float angle);
+
+private:
+    juce::Typeface::Ptr script, oswaldMedium, oswaldRegular;
 };
 
+//==============================================================================
+class VuMeter : public juce::Component
+{
+public:
+    VuMeter (VintageLookAndFeel& l, juce::String channelName) : lnf (l), name (std::move (channelName)) {}
+
+    // rectifiedAverage: gleichgerichteter Mittelwert (linear), peak: Spitzenwert (linear)
+    void update (float rectifiedAverage, float peak, float dt);
+    void paint (juce::Graphics&) override;
+
+private:
+    static float vuToFraction (float vu) { return std::pow (10.0f, (vu - 3.0f) / 20.0f); }
+
+    VintageLookAndFeel& lnf;
+    juce::String name;
+    float position = 0.0f, velocity = 0.0f;   // Zeigerstellung 0..1 (inkl. Masse/Feder)
+    float peakHold = 0.0f;
+};
+
+//==============================================================================
 class RaumAudioProcessorEditor : public juce::AudioProcessorEditor, private juce::Timer
 {
 public:
@@ -43,37 +80,37 @@ private:
     struct Knob
     {
         juce::Slider slider;
-        juce::Label label;
+        juce::String name;
         std::unique_ptr<SliderAttachment> attachment;
-        void setBounds (juce::Rectangle<int> r) { label.setBounds (r.removeFromTop (16)); slider.setBounds (r); }
-        void setActive (bool a) { slider.setAlpha (a ? 1.0f : 0.4f); label.setAlpha (a ? 1.0f : 0.4f); }
+        int section = 0;
     };
 
-    Knob& addKnob (const juce::String& paramID, const juce::String& text, juce::Colour accent);
-    void setupPower (juce::ToggleButton& b, const juce::String& paramID, juce::Colour accent);
-    void timerCallback() override;
+    struct Section { juce::String title; juce::Rectangle<int> bounds; juce::ToggleButton* power; };
 
-    void drawReels (juce::Graphics&, juce::Rectangle<float>, bool active);
-    void drawSpring (juce::Graphics&, juce::Rectangle<float>, bool active);
-    void drawDoublerIcon (juce::Graphics&, juce::Rectangle<float>, bool active);
-    void drawPanel (juce::Graphics&, juce::Rectangle<int>, juce::Colour accent, bool active);
+    Knob& addKnob (const juce::String& paramID, const juce::String& name, int section);
+    void setupSwitch (juce::ToggleButton& b, const juce::String& paramID, juce::Colour lamp);
+    void timerCallback() override;
+    void renderTextures();
+    void drawEngraved (juce::Graphics&, const juce::String&, juce::Rectangle<float>, juce::Font, juce::Justification);
 
     RaumAudioProcessor& proc;
-    RaumLookAndFeel lnf;
+    VintageLookAndFeel lnf;
 
     std::vector<std::unique_ptr<Knob>> knobs;
     Knob *dMix = nullptr, *dWidth = nullptr, *dDepth = nullptr;
     Knob *eTime = nullptr, *eFb = nullptr, *eTone = nullptr, *eWow = nullptr, *eMix = nullptr;
     Knob *sMix = nullptr, *sDecay = nullptr, *sTone = nullptr, *sDwell = nullptr, *outKnob = nullptr;
 
-    juce::ToggleButton dOn { "DOUBLER" }, eOn { "BANDECHO" }, sOn { "FEDERHALL" }, pingPong { "" };
+    juce::ToggleButton dOn, eOn, sOn, pingPong;
     std::vector<std::unique_ptr<ButtonAttachment>> buttonAttachments;
     juce::ComboBox syncBox, presetBox;
-    juce::Label syncLabel, presetLabel, pingPongLabel;
     std::unique_ptr<ComboAttachment> syncAttachment;
 
-    juce::Rectangle<int> dPanel, ePanel, sPanel, oPanel;
-    float reelAngle = 0.0f, springPhase = 0.0f, meterL = 0.0f, meterR = 0.0f;
+    VuMeter vuLeft { lnf, "L" }, vuRight { lnf, "R" };
+
+    std::array<Section, 4> sections;
+    juce::Rectangle<int> faceplate, presetArea, syncLabelArea, pingPongLabelArea, pilotArea;
+    juce::Image tolexImage, faceplateImage;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RaumAudioProcessorEditor)
 };

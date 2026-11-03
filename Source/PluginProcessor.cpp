@@ -158,6 +158,8 @@ void RaumAudioProcessor::prepareToPlay (double sampleRate, int)
     init (smSOn, sOn.get()); init (smSDwell, sDwell.get() * 0.01f); init (smSMix, sMix.get() * 0.01f);
     init (smOut, juce::Decibels::decibelsToGain (outGain.get()));
     lastETone = lastSDecay = lastSTone = -1;
+    vuCoef = (float) (1.0 - std::exp (-1.0 / (0.01 * sr)));
+    vuStateL = vuStateR = 0;
 }
 
 void RaumAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
@@ -216,10 +218,14 @@ void RaumAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         const float g = smOut.getNextValue();
         L[i] = sl * g;
         R[i] = sr2 * g;
+        vuStateL += (std::abs (L[i]) - vuStateL) * vuCoef;
+        vuStateR += (std::abs (R[i]) - vuStateR) * vuCoef;
         peakL = juce::jmax (peakL, std::abs (L[i]));
         peakR = juce::jmax (peakR, std::abs (R[i]));
     }
 
+    vuL.store (vuStateL);
+    vuR.store (vuStateR);
     meterL.store (juce::jmax (peakL, meterL.load() * 0.9f));
     meterR.store (juce::jmax (peakR, meterR.load() * 0.9f));
 }

@@ -40,6 +40,11 @@ juce_add_plugin(KlangbildRaum
     VST3_CATEGORIES Fx Delay Reverb
     COPY_PLUGIN_AFTER_BUILD FALSE)
 
+juce_add_binary_data(RaumAssets SOURCES
+    Resources/Yellowtail-Regular.ttf
+    Resources/Oswald-Medium.ttf
+    Resources/Oswald-Regular.ttf)
+
 target_sources(KlangbildRaum PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp)
@@ -54,6 +59,7 @@ target_compile_definitions(KlangbildRaum PUBLIC
 
 target_link_libraries(KlangbildRaum
     PRIVATE
+        RaumAssets
         juce::juce_audio_utils
         juce::juce_dsp
     PUBLIC
