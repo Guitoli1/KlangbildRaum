@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "ScaledEditor.h"
 
 namespace
 {
@@ -254,6 +255,6 @@ void RaumAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
         }
 }
 
-juce::AudioProcessorEditor* RaumAudioProcessor::createEditor() { return new RaumAudioProcessorEditor (*this); }
+juce::AudioProcessorEditor* RaumAudioProcessor::createEditor() { return new kb::ScaledEditor (*this, new RaumAudioProcessorEditor (*this)); }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new RaumAudioProcessor(); }
